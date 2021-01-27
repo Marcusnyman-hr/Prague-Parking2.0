@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "tbZe9aR/BtuDYliG8tSEBPz+mZiDdytSNSqFiKE1tQjgzX0DVQ3rK7849iz//X56WbtlMfTHBj2Uaf6bWZMi0A==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Marcu\\source\\repos\\PragueParking2.0\\PragueParking2.0\\PragueParking2.0.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Marcu\\.nuget\\packages\\json.net\\1.0.23\\json.net.1.0.23.nupkg.sha512",
+    "C:\\Users\\Marcu\\.nuget\\packages\\newtonsoft.json\\12.0.3\\newtonsoft.json.12.0.3.nupkg.sha512",
+    "C:\\Users\\Marcu\\.nuget\\packages\\spectre.console\\0.37.0\\spectre.console.0.37.0.nupkg.sha512",
+    "C:\\Users\\Marcu\\.nuget\\packages\\wcwidth\\0.2.0\\wcwidth.0.2.0.nupkg.sha512"
+  ],
+  "logs": []
+}

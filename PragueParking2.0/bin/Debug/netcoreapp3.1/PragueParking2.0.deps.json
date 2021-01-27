@@ -1,0 +1,91 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "PragueParking2.0/1.0.0": {
+        "dependencies": {
+          "Json.Net": "1.0.23",
+          "Newtonsoft.Json": "12.0.3",
+          "Spectre.Console": "0.37.0"
+        },
+        "runtime": {
+          "PragueParking2.0.dll": {}
+        }
+      },
+      "Json.Net/1.0.23": {
+        "runtime": {
+          "lib/netstandard2.0/Json.Net.dll": {
+            "assemblyVersion": "1.0.23.1",
+            "fileVersion": "1.0.23.1"
+          }
+        }
+      },
+      "Newtonsoft.Json/12.0.3": {
+        "runtime": {
+          "lib/netstandard2.0/Newtonsoft.Json.dll": {
+            "assemblyVersion": "12.0.0.0",
+            "fileVersion": "12.0.3.23909"
+          }
+        }
+      },
+      "Spectre.Console/0.37.0": {
+        "dependencies": {
+          "Wcwidth": "0.2.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Spectre.Console.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.37.0.0"
+          }
+        }
+      },
+      "Wcwidth/0.2.0": {
+        "runtime": {
+          "lib/netstandard2.0/Wcwidth.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.2.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "PragueParking2.0/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Json.Net/1.0.23": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gokTwC3OVatrIFwQBaooj6EV3+08ryFIqdfR6RP4K61x5uSschPmKHl5XppvgdD/lmfY9IYZIoBt8V5Y0SU0nQ==",
+      "path": "json.net/1.0.23",
+      "hashPath": "json.net.1.0.23.nupkg.sha512"
+    },
+    "Newtonsoft.Json/12.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6mgjfnRB4jKMlzHSl+VD+oUc1IebOZabkbyWj2RiTgWwYPPuaK1H97G1sHqGwPlS5npiF5Q0OrxN1wni2n5QWg==",
+      "path": "newtonsoft.json/12.0.3",
+      "hashPath": "newtonsoft.json.12.0.3.nupkg.sha512"
+    },
+    "Spectre.Console/0.37.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Kfjg8UfXFiB89dDiBNV2HpAHp5lNQvhHJdbUrtV96Hc9LPU3bdNaeTNIA5rLFiSLKn8QT0QCv7pSqSd3xHKvEQ==",
+      "path": "spectre.console/0.37.0",
+      "hashPath": "spectre.console.0.37.0.nupkg.sha512"
+    },
+    "Wcwidth/0.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-H7no2W0vuLJTvSPanlrijtG3UdJNVoeWBOp2a5dJFVa2tqSQuP5GfbJw1xAtPG9agRW310nFTUUsyPz5tuVIxw==",
+      "path": "wcwidth/0.2.0",
+      "hashPath": "wcwidth.0.2.0.nupkg.sha512"
+    }
+  }
+}
