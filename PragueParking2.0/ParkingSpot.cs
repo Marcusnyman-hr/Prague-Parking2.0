@@ -103,7 +103,7 @@ namespace PragueParking2._0
             }
         }
         
-        public float deParkVehicleFromSpot(int indexToRemove, Configuration config)
+        public float deParkVehicleFromSpot(int indexToRemove, Config config)
         {
             int sizeOfDeparkedVehicle = getVehicleSize(ParkedVehiclesOnSpot[indexToRemove]);
             int pricePerHour = getVehiclePrice(ParkedVehiclesOnSpot[indexToRemove]);

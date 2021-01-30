@@ -10,6 +10,10 @@ namespace PragueParking2._0
         public Vehicle() : this("undefined", "undefined", 999, DateTime.Now)
         {
         }
+        public Vehicle(string owner)
+        {
+            this.Owner = owner;
+        }
         public Vehicle(string owner, DateTime parkedSince)
         {
             this.Owner = owner;

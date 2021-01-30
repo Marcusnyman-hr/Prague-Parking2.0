@@ -6,14 +6,16 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
-
+using System.Data.SqlClient;
+using Dapper;
+using System.Threading;
 
 namespace PragueParking2._0
 {
 
     class Program
     {
-        //Stuff to auto-maximize window
+        //auto-maximize window
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
         private static IntPtr ThisConsole = GetConsoleWindow();
@@ -26,29 +28,33 @@ namespace PragueParking2._0
 
         //initiate parkinglot
         public static List<ParkingSpot> ParkingLot = new List<ParkingSpot>();
-        //Load config file
 
-        public static Configuration config = LoadConfigFile();
+        //Load config file
+        public static Config config = LoadConfigFile();
         static void Main(string[] args)
         {
+            //auto-maximize window
             Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
             ShowWindow(ThisConsole, MAXIMIZE);
+
             //Create the accurate amount of parkingspots
             for (int i = 0; i < config.ParkingSpotsAmount; i++ )
             {
                 ParkingLot.Add(new ParkingSpot(i, config.ParkingSpotSize));
             }
+
             //Load storagefile with stored vehicles
             LoadVehicles(config);
+
             //Login
             bool loggedIn = false;
             while(!loggedIn)
             {
                 loggedIn = LogIn();
             }
+
             //Main menu
             bool menuIsActive = true;
-
             while (menuIsActive)
             {
                 Console.Clear();
@@ -61,13 +67,12 @@ namespace PragueParking2._0
                         .AddChoices(new[] {
                             "Park vehicle", 
                             "Repark vehicle",
-                            "Depark Vehicle",
+                            "Depark vehicle",
                             "Reload configuration file",
                             "Show pricelist",
                             "Show list of occupied parkingspots",
                             "Show map",
-                            "Generate vehicles:"
-
+                            "Generate vehicles",
                         }));
                 switch(menuOption)
                 {
@@ -82,8 +87,11 @@ namespace PragueParking2._0
                         break;
                     case "Reload configuration file":
                         config = LoadConfigFile();
-                        Console.WriteLine("Reloaded the configuration file.");
-                        Console.WriteLine("Press any key to go back to main menu..");
+                        Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.WindowHeight / 2 -2);
+                        AnsiConsole.Markup("[springgreen4]Reloaded the configuration file.. [/]");
+                        Console.WriteLine();
+                        Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                        AnsiConsole.MarkupLine("Press [springgreen4]any key[/] to go back to the main menu..");
                         Console.ReadKey();
                         break;
                     case "Show pricelist":
@@ -95,7 +103,7 @@ namespace PragueParking2._0
                     case "Show map":
                         renderParkingOverview(ParkingLot);
                         break;
-                    case "Generate vehicles:":
+                    case "Generate vehicles":
                         GenerateVehicles();
                         break;
                     default:
@@ -106,15 +114,16 @@ namespace PragueParking2._0
             }
         }
 
+
         public static void ShowParkingLotList()
         {
             Console.WriteLine();
             Console.WriteLine();
+
             // Create a table and colums
             var table = new Table();
             table.Border = TableBorder.HeavyEdge;
             table.Centered();
-            //table.AddColumn("Type: ");
             table.AddColumn(new TableColumn(new Markup("[bold yellow]Type: [/]")));
             table.AddColumn(new TableColumn(new Markup("[bold yellow]Registration Number: [/]")));
             table.AddColumn(new TableColumn(new Markup("[bold yellow]Token: [/]")));
@@ -122,9 +131,11 @@ namespace PragueParking2._0
             table.AddColumn(new TableColumn(new Markup("[bold yellow]Parked Since: [/]")));
             table.AddColumn(new TableColumn(new Markup("[bold yellow]Accumulated Cost: [/]")));
 
+            //Loop through parkingspots in parkinglot
             foreach (ParkingSpot pspot in ParkingLot)
             {
-                if (pspot.FreeSpace != 4)
+                //Check which parkingspots have vehicles parked on them
+                if (pspot.FreeSpace != Program.config.ParkingSpotsAmount)
                 {
                     foreach (var vehicle in pspot.ListParkedVehicles())
                     {
@@ -148,15 +159,25 @@ namespace PragueParking2._0
             Console.ReadLine();
         }
 
+        //Show pricelist
         public static void ShowPriceList()
         {
-            Console.WriteLine($"Prices per vehicle /60min");
-            Console.WriteLine($"Bicycle: { Program.config.BicyclePrice}CZK");
-            Console.WriteLine($"Mc: { Program.config.McPrice}CZK");
-            Console.WriteLine($"Car: { Program.config.CarPrice}CZK");
-            Console.WriteLine("Press any key to go back to the main menu..");
+            //Create a table and colums
+            var table = new Table();
+            table.Border = TableBorder.HeavyEdge;
+            table.Centered();
+            table.AddColumn(new TableColumn(new Markup("[bold yellow]Type: [/]")));
+            table.AddColumn(new TableColumn(new Markup("[bold yellow]Price: [/]")));
+            foreach(var vehicleType in Program.config.VehicleTypes)
+            {
+                table.AddRow($"[hotpink2]{vehicleType.Name} [/]", $"[hotpink2]{vehicleType.Price} [/]");
+            }
+            //center the chart diagonally
+            Console.SetCursorPosition(0, (Console.WindowHeight - Program.config.VehicleTypes.Count) / 2 );
+            AnsiConsole.Render(table);
             Console.ReadKey();
         }
+        //Silly login script
         public static bool LogIn()
         {
             Console.Clear();
@@ -171,11 +192,8 @@ namespace PragueParking2._0
             new TextPrompt<string>("[green]Password[/]: ")
             .PromptStyle("red")
             .Secret());
-            //Console.Write("Password: ");
-            //password = Console.ReadLine();
             if(username == "admin" && password == "password")
             {
-                
                 Console.WriteLine();
                 Console.SetCursorPosition((Console.WindowWidth - 4) / 2, Console.CursorTop);
                 Console.WriteLine("Success!");
@@ -191,22 +209,24 @@ namespace PragueParking2._0
 
 
         }
+        //Repark vehicle
         public static void ReparkVehicle()
         {
-            Console.WriteLine("Please enter token or registration number:");
-            string regOrToken = Console.ReadLine();
+            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.WindowHeight / 2 - 2);            
+            var regOrToken = AnsiConsole.Ask<string>("What's the vehicle [green]registration number or token?[/]");
             int[] indexOfVehicle = FindVehicle(regOrToken);
             if(indexOfVehicle[0] == -1)
             {
-                Console.WriteLine("No vehicle found!..");
+                Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                AnsiConsole.Markup("[underline darkred_1]No vehicle found..[/] ");
                 Console.ReadKey();
             }else
             {
                 int newParkingSpot;
                 bool parseSuccess;
                 var vehicle = ParkingLot[indexOfVehicle[0]].ParkedVehiclesOnSpot[indexOfVehicle[1]];
-                Console.WriteLine("Where do you want to park it?");
-                string newParkingSpotString = Console.ReadLine();
+                Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                var newParkingSpotString = AnsiConsole.Ask<string>("Where do you want to park it?");
                 parseSuccess = int.TryParse(newParkingSpotString, out newParkingSpot);
                 if(parseSuccess)
                 {
@@ -228,23 +248,26 @@ namespace PragueParking2._0
                         {
                             ParkCar((Car)vehicle, newParkingSpot, config);
                         }
-                        Console.WriteLine($"Successfully reparked the vehicle on parkingspot: {newParkingSpot}");
+                        Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                        AnsiConsole.Markup($"Successfully reparked the vehicle on parkingspot: [underline springgreen3]{newParkingSpot}[/]");
                         Console.ReadKey();
                     } else
                     {
-                        Console.WriteLine("No space here, sorry.");
+                        Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                        AnsiConsole.Markup("[underline darkred_1]No available space here, sorry!..[/]");
                         Console.ReadKey();
                     }
                 } else
                 {
-                    Console.WriteLine("Please enter a valid number..");
+                    Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                    AnsiConsole.Markup("Please enter a [underline darkred_1]valid number..[/]");
                     Console.ReadKey();
                 }
                 WriteToStorage();
             }
         }
 
-        //Write stored cehicles to the storage-file
+        //Write stored vehicles to the storage-file
         public static void WriteToStorage()
         {
             string vehicleJsonData = JsonConvert.SerializeObject(ParkingLot);
@@ -259,17 +282,20 @@ namespace PragueParking2._0
         {
             if (regInfo.Length < 7)
             {
-                Console.WriteLine("Your registration info should contain 7 characters");
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.WindowHeight / 2 - 3);
+                AnsiConsole.Markup($"Please enter a valid registration number - [underline darkred_1]Min 7 characters[/]");
                 return "error";
             }
             else if (regInfo.Length > 7)
             {
-                Console.WriteLine("Your registration info should contain Maximum 7 characters");
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.WindowHeight / 2 - 3);
+                AnsiConsole.Markup($"Please enter a valid registration number - [underline darkred_1]Max 7 characters[/]");
                 return "error";
             }
             else if (!Regex.IsMatch(regInfo, "^[a-zA-Z0-9À-ž]*$"))
             {
-                Console.WriteLine("Your registration info should only contain letters and numbers");
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.WindowHeight / 2 - 3);
+                AnsiConsole.Markup($"Your registration number can [underline darkred_1]only contain Letters and numbers[/]");
                 return "error";
             }
             else
@@ -279,7 +305,7 @@ namespace PragueParking2._0
         }
 
         //Load the stored vehicles from storagefile
-        public static void LoadVehicles(Configuration config)
+        public static void LoadVehicles(Config config)
         {
             using (StreamReader reader = new StreamReader(@"C:\vehiclestorage.json"))
             {
@@ -337,20 +363,7 @@ namespace PragueParking2._0
             }
                 
         }
-        public static string TokenOrRegistrationNumber(string input)
-        {
-            if(input.Length == 7)
-            {
-                return "registrationnumber";
-            }
-            else if(input.Length == 10)
-            {
-                return "token";
-            } else
-            {
-                return "error";
-            }
-        }
+        //Find a vehicle
         public static int[] FindVehicle(string input)
         {
             int[] indexes = new int[2];
@@ -371,10 +384,11 @@ namespace PragueParking2._0
             indexes[1] = -1;
             return indexes;
         }
+        //Depark a vehicle
         public static void DeparkVehicle()
         {
-            Console.WriteLine("Please enter the vehicle token or registration number:");
-            string regInfoOrvehicleToken = Console.ReadLine();
+            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.WindowHeight / 2 - 2);
+            var regInfoOrvehicleToken = AnsiConsole.Ask<string>("What's the vehicle [green]registration number or token?[/]");
             if (regInfoOrvehicleToken.Length == 10)
             {
                 foreach (ParkingSpot pspot in ParkingLot)
@@ -384,7 +398,9 @@ namespace PragueParking2._0
                         if (testVehicle.Token == regInfoOrvehicleToken)
                         {
                             float charge = pspot.deParkVehicleFromSpot(pspot.findIndexOfVehicle(regInfoOrvehicleToken), config);
-                            Console.WriteLine($"Please charge the customer: {charge}CZK.");
+                            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                            AnsiConsole.Markup($"Please charge the customer: [green]{charge}[/] CZK");
+                            Console.ReadKey();
                             WriteToStorage();
                             return;
                         }
@@ -400,7 +416,9 @@ namespace PragueParking2._0
                         if (testVehicle.RegistrationNumber == regInfoOrvehicleToken)
                         {
                             float charge = pspot.deParkVehicleFromSpot(pspot.findIndexOfVehicle(regInfoOrvehicleToken), config);
-                            Console.WriteLine($"Please charge the customer: {charge}CZK.");
+                            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                            AnsiConsole.Markup($"Please charge the customer: [green]{charge}[/] CZK");
+                            Console.ReadKey();
                             WriteToStorage();
                             return;
                         }
@@ -408,23 +426,27 @@ namespace PragueParking2._0
                 }
 
             } else {
-                Console.WriteLine("Couldn't find that vehicle!");
+                Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+                AnsiConsole.Markup($"[underline darkred_1]No vehicle found..[/]");
+                Console.ReadKey();
             }
         }
         //Load and deserialize the config file, create a new object of the class Configuration
-        public static Configuration LoadConfigFile()
+        public static Config LoadConfigFile()
         {
-            using (StreamReader reader = new StreamReader(@"C:\configuration.json"))
+            using (StreamReader reader = new StreamReader(@"C:\testconfig.json"))
             {
                 string json = reader.ReadToEnd();
-                Configuration config = JsonConvert.DeserializeObject<Configuration>(json);
+                Config config = JsonConvert.DeserializeObject<Config>(json);
                 return config;
             }
         }
         //Park a vehicle
-        public static void ParkVehicle(Configuration config)
+        public static void ParkVehicle(Config config)
         {
             //RENDER MENU
+            var table = new Table();
+            table.AddColumn("Menu");
             var menuOption = AnsiConsole.Prompt(
                     new SelectionPrompt<string>()
                         .Title("What type of vehicle?")
@@ -433,53 +455,68 @@ namespace PragueParking2._0
                             "Bicycle",
                             "Mc",
                             "Car",
-                            "Bus"
-                        }));
+                        })); ;
             //Collect information from user
-            if(menuOption == "Bicycle")
+            if (menuOption == "Bicycle")
             {
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.WindowHeight / 2 - 3);
                 var bikeOwner = AnsiConsole.Prompt(
                     new TextPrompt<string>("[grey][[Optional]][/] [dodgerblue3]What's the owners name?[/]")
                     .AllowEmpty());
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
                 var bikeColor = AnsiConsole.Prompt(
                 new TextPrompt<string>("[grey][[Optional]][/] [dodgerblue3]What's the color of the bicycle?[/]")
                 .AllowEmpty());
                 int bikeSpot = findFreeSpot("bicycle", config);
                 string token = ParkBicycle(new Bicycle(bikeOwner, bikeColor, bikeSpot, DateTime.Now), bikeSpot, config);
                 Console.WriteLine();
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
                 Console.WriteLine($"Successfully parked the bicycle at: {bikeSpot}");
-                Console.WriteLine($"Token for deparking: {token}");
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                AnsiConsole.Markup($"Token for deparking: [underline springgreen3]{token}[/]");
                 Console.ReadKey();
             } else
             {
-                Console.WriteLine("Please enter the registration number:");
-                string registrationNumber = validateRegInfo(Console.ReadLine());
-                if (registrationNumber == "error") {
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.WindowHeight / 2 - 5);
+                string registrationNumber = validateRegInfo(AnsiConsole.Ask<string>("What's the vehicle [green]registration number?[/]"));
+                if (registrationNumber == "error") {;
                     Console.ReadKey();
                     return;
                 }
-                Console.WriteLine("Whats the owners name? (optional)");
-                string owner = Console.ReadLine();
-                Console.WriteLine("What brand is the vehicle? (optional)");
-                string brand = Console.ReadLine();
-                Console.WriteLine("What model is the vehicle? (optional)");
-                string model = Console.ReadLine();
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                var owner = AnsiConsole.Prompt(
+                    new TextPrompt<string>("[grey][[Optional]][/] [dodgerblue3]What's the owners name?[/]")
+                    .AllowEmpty());
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                var brand = AnsiConsole.Prompt(
+                    new TextPrompt<string>("[grey][[Optional]][/] [dodgerblue3]What's the brand of the vehicle?[/]")
+                    .AllowEmpty());
+                Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                var model = AnsiConsole.Prompt(
+                    new TextPrompt<string>("[grey][[Optional]][/] [dodgerblue3]Of what model is the vehicle?[/]")
+                    .AllowEmpty());
+                Console.WriteLine();
 
-                switch(menuOption)
+                switch (menuOption)
                 {
                     case "Mc":
                         int mcSpot = findFreeSpot("mc", config);
                         string mcToken = ParkMc(new Mc(registrationNumber, owner, brand, model, mcSpot, DateTime.Now), mcSpot, config);
-                        Console.WriteLine($"{registrationNumber} parked on {mcSpot}");
-                        Console.WriteLine($"Token for deparking: {mcToken}");
-                        Console.ReadLine();
+
+                        Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                        Console.WriteLine($"Successfully parked the mc at parking spot: {mcSpot}");
+                        Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                        AnsiConsole.Markup($"Token for deparking: [underline springgreen3]{mcToken}[/]");
+                        Console.ReadKey();
                         break;
                     case "Car":
                         int carSpot = findFreeSpot("car", config);
                         string carToken = ParkCar(new Car(registrationNumber, owner, brand, model, carSpot, DateTime.Now), carSpot, config);
-                        Console.WriteLine($"{registrationNumber} parked on {carSpot}");
-                        Console.WriteLine($"Token for deparking: {carToken}");
-                        Console.ReadLine();
+                        Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                        Console.WriteLine($"Successfully parked the mc at parking spot: {carSpot}");
+                        Console.SetCursorPosition((Console.WindowWidth - 40) / 2, Console.CursorTop);
+                        AnsiConsole.Markup($"Token for deparking: [underline springgreen3]{carToken}[/]");
+                        Console.ReadKey();
                         break;
                 }
             }
@@ -487,7 +524,7 @@ namespace PragueParking2._0
             WriteToStorage();
         }
         //Populate parkingspot objects:
-        public static string ParkBicycle(Bicycle bicycle, int spot, Configuration config)
+        public static string ParkBicycle(Bicycle bicycle, int spot, Config config)
         {
             if(spot > ParkingLot.Count)
             {
@@ -497,7 +534,7 @@ namespace PragueParking2._0
             ParkingLot[spot].UseParking(config.BicycleSize, bicycle);
             return bicycle.Token;
         }
-        public static string ParkCar(Car car, int spot, Configuration config)
+        public static string ParkCar(Car car, int spot, Config config)
         {
             if (spot > ParkingLot.Count)
             {
@@ -507,7 +544,7 @@ namespace PragueParking2._0
             ParkingLot[spot].UseParking(config.CarSize, car);
             return car.Token;
         }
-        public static string ParkMc(Mc mc, int spot, Configuration config)
+        public static string ParkMc(Mc mc, int spot, Config config)
         {
             if (spot > ParkingLot.Count)
             {
@@ -518,7 +555,7 @@ namespace PragueParking2._0
             return mc.Token;
         }
         //Helper method to find a free spot where the vehicle in question will fit.
-        public static int findFreeSpot(string vehicleType, Configuration config)
+        public static int findFreeSpot(string vehicleType, Config config)
         {
             
             int size = 0;
@@ -548,25 +585,7 @@ namespace PragueParking2._0
             }
         }
 
-        public static void ShowMap()
-        {
-            Console.Clear();
-            var heading = new Rule("Parkinglot map");
-            AnsiConsole.Render(heading);
-            Console.WriteLine("Showing map");
-        }
-        //Load Price list -- Should change to streamreader and json --------------!!!
-        public static void LoadPriceList()
-        {
-            string filePath = @"C:\pricelist.txt";
-            List<string> priceList = File.ReadAllLines(filePath).ToList();
-
-            foreach(string instance in priceList)
-            {
-                Console.WriteLine(instance);
-            }
-            Console.ReadLine();
-        }
+        //Count amount of vehicles of each type
         public static int[] CountVehicles(List<ParkingSpot> parkingLot)
         {
             int[] amountOfVehicles = { 0, 0, 0 };
@@ -584,7 +603,7 @@ namespace PragueParking2._0
             }
             return amountOfVehicles;
         }
-
+        //Render a map
         public static void renderParkingOverview(List<ParkingSpot> parkingLot)
         {
             int[] amountOfVehicles = CountVehicles(parkingLot);
@@ -670,7 +689,6 @@ namespace PragueParking2._0
                         Console.Write(parkingCell);
                     }
                 }
-                //k++;
                 Console.WriteLine();
             };
             Console.WriteLine();
@@ -691,9 +709,13 @@ namespace PragueParking2._0
                 .AddItem("Cars", amountOfVehicles[2], Color.MediumPurple)
             );
             table.Columns[0].Centered();
+            
             AnsiConsole.Render(table);
+            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+            AnsiConsole.MarkupLine("Press [springgreen4]any key[/] to go back to the main menu..");
             Console.ReadKey();
         }
+        //Simple script to generate 10 random vehicles
         public static void GenerateVehicles()
         {
             var config = Program.config;
@@ -705,38 +727,48 @@ namespace PragueParking2._0
             string[] mcBrands = { "Yamaha", "Suzuki", "Kawasaki", "Baotian", "Hinseng", "Aprilia", "Peugot", "Jawa", "Honda" };
 
             Random random = new Random();
-
-            for (int i = 0; i < 10; i++)
-            {
-                int randomVehicleType = random.Next(0, 3);
-                if (randomVehicleType == 1)
-                {
-                    string owner = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}";
-                    string color = $"{colors[random.Next(colors.Length)]}";
-                    int freeSpot = findFreeSpot("bicycle", config);
-                    ParkBicycle(new Bicycle(owner, color, freeSpot, DateTime.Now), freeSpot, config);
-                    Console.WriteLine("Bike: " + owner);
-                }
-                else if (randomVehicleType == 2)
-                {
-                    string owner = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}";
-                    string brand = $"{mcBrands[random.Next(mcBrands.Length)]}";
-                    string registrationNumber = $"{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{random.Next(100, 999)}";
-                    int freeSpot = findFreeSpot("mc", config);
-                    ParkMc(new Mc(registrationNumber, owner, brand, " ", freeSpot, DateTime.Now), freeSpot, config);
-                    Console.WriteLine($"Mc: {registrationNumber}");
-                }
-                else
-                {
-                    string owner = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}";
-                    string brand = $"{carBrands[random.Next(carBrands.Length)]}";
-                    string registrationNumber = $"{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{random.Next(100, 999)}";
-                    int freeSpot = findFreeSpot("car", config);
-                    ParkCar(new Car(registrationNumber, owner, brand, " ", freeSpot, DateTime.Now), freeSpot, config);
-                    Console.WriteLine($"Car: {registrationNumber}");
-                }
-
-            }
+                    for (int i = 0; i < 10; i++)
+                    {
+                        if (i == 0) {
+                            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, (Console.WindowHeight - 20) / 2); 
+                        }
+                        else
+                        {
+                            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop +1);
+                        }
+                        
+                        int randomVehicleType = random.Next(0, 3);
+                        if (randomVehicleType == 1)
+                        {
+                            string owner = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}";
+                            string color = $"{colors[random.Next(colors.Length)]}";
+                            int freeSpot = findFreeSpot("bicycle", config);
+                            string token = ParkBicycle(new Bicycle(owner, color, freeSpot, DateTime.Now), freeSpot, config);
+                            Console.WriteLine($"Bike with token: {token} generated.");
+                        }
+                        else if (randomVehicleType == 2)
+                        {
+                            string owner = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}";
+                            string brand = $"{mcBrands[random.Next(mcBrands.Length)]}";
+                            string registrationNumber = $"{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{random.Next(100, 999)}";
+                            int freeSpot = findFreeSpot("mc", config);
+                            ParkMc(new Mc(registrationNumber, owner, brand, " ", freeSpot, DateTime.Now), freeSpot, config);
+                            Console.WriteLine($"Mc with registration number: {registrationNumber} generated.");
+                        }
+                        else
+                        {
+                            string owner = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}";
+                            string brand = $"{carBrands[random.Next(carBrands.Length)]}";
+                            string registrationNumber = $"{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{characters[random.Next(characters.Length)].ToString()}{random.Next(100, 999)}";
+                            int freeSpot = findFreeSpot("car", config);
+                            ParkCar(new Car(registrationNumber, owner, brand, " ", freeSpot, DateTime.Now), freeSpot, config);
+                            Console.WriteLine($"Car with registration number: {registrationNumber} generated.");
+                        }
+                        Thread.Sleep(500);
+                    }
+            Console.WriteLine();
+            Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
+            AnsiConsole.Markup("Press [springgreen3]any key[/] to go back to the main menu..");
             Console.ReadKey();
             WriteToStorage();
         }

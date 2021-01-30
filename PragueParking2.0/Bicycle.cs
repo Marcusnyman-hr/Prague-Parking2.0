@@ -6,6 +6,13 @@ namespace PragueParking2._0
 {
     public class Bicycle : Vehicle
     {
+        public Bicycle()
+        {
+
+        }
+        public Bicycle(string owner) : base(owner)
+        {
+        } 
         public Bicycle(string owner, string color, int parkedAt, DateTime parkedSince) : base(owner, parkedAt, parkedSince)
         {
             this.Color = color;
