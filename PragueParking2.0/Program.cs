@@ -411,9 +411,9 @@ namespace PragueParking2._0
             {
                 foreach (ParkingSpot pspot in ParkingLot)
                 {
-                    foreach (Vehicle testVehicle in pspot.ListParkedVehicles())
+                    foreach (Vehicle vehicle in pspot.ListParkedVehicles())
                     {
-                        if (testVehicle.Token == regInfoOrvehicleToken)
+                        if (vehicle.Token == regInfoOrvehicleToken)
                         {
                             float charge = pspot.deParkVehicleFromSpot(pspot.findIndexOfVehicle(regInfoOrvehicleToken), config);
                             Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
@@ -429,9 +429,9 @@ namespace PragueParking2._0
             {
                 foreach (ParkingSpot pspot in ParkingLot)
                 {
-                    foreach (Vehicle testVehicle in pspot.ListParkedVehicles())
+                    foreach (Vehicle vehicle in pspot.ListParkedVehicles())
                     {
-                        if (testVehicle.RegistrationNumber == regInfoOrvehicleToken)
+                        if (vehicle.RegistrationNumber == regInfoOrvehicleToken)
                         {
                             float charge = pspot.deParkVehicleFromSpot(pspot.findIndexOfVehicle(regInfoOrvehicleToken), config);
                             Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
