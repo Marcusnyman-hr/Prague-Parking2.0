@@ -73,6 +73,7 @@ namespace PragueParking2._0
                             "Show list of occupied parkingspots",
                             "Show map",
                             "Generate vehicles",
+                            "Exit program"
                         }));
                 switch(menuOption)
                 {
@@ -106,6 +107,9 @@ namespace PragueParking2._0
                     case "Generate vehicles":
                         GenerateVehicles();
                         break;
+                    case "Exit program":
+                        ExitProgram();
+                        break;
                     default:
                         Console.WriteLine("Faulty choice");
                         Console.ReadLine();
@@ -114,7 +118,21 @@ namespace PragueParking2._0
             }
         }
 
-
+        public static void ExitProgram()
+        {
+            Console.SetCursorPosition((Console.WindowWidth - 33) / 2, Console.WindowHeight / 2);
+            if (!AnsiConsole.Confirm("Are you sure you want to exit?"))
+            {
+                return;
+            } else
+            {
+                WriteToStorage();
+                Console.SetCursorPosition((Console.WindowWidth - 33) / 2, Console.CursorTop);
+                AnsiConsole.Markup("[springgreen3]All data saved[/], you may now exit the program..");
+                Console.ReadKey();
+                Environment.Exit(0);
+            }
+        }
         public static void ShowParkingLotList()
         {
             Console.WriteLine();
@@ -271,7 +289,7 @@ namespace PragueParking2._0
         public static void WriteToStorage()
         {
             string vehicleJsonData = JsonConvert.SerializeObject(ParkingLot);
-            string filePath = @"C:\vehiclestorage.json";
+            string filePath = @"vehiclestorage.json";
             StreamWriter sw = new StreamWriter(filePath);
             sw.Write(vehicleJsonData);
             sw.Close();
@@ -307,7 +325,7 @@ namespace PragueParking2._0
         //Load the stored vehicles from storagefile
         public static void LoadVehicles(Config config)
         {
-            using (StreamReader reader = new StreamReader(@"C:\vehiclestorage.json"))
+            using (StreamReader reader = new StreamReader(@"vehiclestorage.json"))
             {
                 //read file and deserialize the data
                 string json = reader.ReadToEnd();
@@ -434,7 +452,7 @@ namespace PragueParking2._0
         //Load and deserialize the config file, create a new object of the class Configuration
         public static Config LoadConfigFile()
         {
-            using (StreamReader reader = new StreamReader(@"C:\testconfig.json"))
+            using (StreamReader reader = new StreamReader(@"config.json"))
             {
                 string json = reader.ReadToEnd();
                 Config config = JsonConvert.DeserializeObject<Config>(json);
@@ -607,6 +625,7 @@ namespace PragueParking2._0
         public static void renderParkingOverview(List<ParkingSpot> parkingLot)
         {
             int[] amountOfVehicles = CountVehicles(parkingLot);
+            int totalVehicles = amountOfVehicles[0] + amountOfVehicles[1] + amountOfVehicles[2];
             Console.WriteLine("Graphic overview:");
             Console.Write("Completely unused:");
             Console.BackgroundColor = ConsoleColor.Green;
@@ -694,8 +713,9 @@ namespace PragueParking2._0
             Console.WriteLine();
             Console.WriteLine();
             Console.ResetColor();
-
-            var table = new Table();
+            if (amountOfVehicles[0] > 0 && amountOfVehicles[2] >0)
+            {
+                var table = new Table();
             table.Width(100);
             table.Centered();
             table.Border = TableBorder.DoubleEdge;
@@ -709,8 +729,9 @@ namespace PragueParking2._0
                 .AddItem("Cars", amountOfVehicles[2], Color.MediumPurple)
             );
             table.Columns[0].Centered();
-            
-            AnsiConsole.Render(table);
+                AnsiConsole.Render(table);
+            }
+
             Console.SetCursorPosition((Console.WindowWidth - 42) / 2, Console.CursorTop);
             AnsiConsole.MarkupLine("Press [springgreen4]any key[/] to go back to the main menu..");
             Console.ReadKey();
