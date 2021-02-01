@@ -198,12 +198,15 @@ namespace PragueParking2._0
         //Silly login script
         public static bool LogIn()
         {
+
+
             Console.Clear();
             var loginHeading = new Rule("Please login - Prague Parking 2.0");
             AnsiConsole.Render(loginHeading);
-            string s = "Hello|World";
-            Console.SetCursorPosition((Console.WindowWidth - s.Length) / 2, Console.CursorTop);
-            Console.SetCursorPosition((Console.WindowWidth - 9) / 2, Console.WindowHeight / 2 - 2);
+            Console.SetCursorPosition((Console.WindowWidth - 30) / 2, Console.WindowHeight / 2 - 2);
+            AnsiConsole.MarkupLine("Pssst.. It's [green]admin / password[/] Classe!..");
+            Console.WriteLine();
+            Console.SetCursorPosition((Console.WindowWidth - 9) / 2, Console.CursorTop);
             string username = AnsiConsole.Ask<string>("[green]Username[/]: ");
             Console.SetCursorPosition((Console.WindowWidth - 9) / 2, Console.CursorTop);
             var password = AnsiConsole.Prompt(
